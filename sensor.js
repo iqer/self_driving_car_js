@@ -9,7 +9,7 @@ class Sensor {
     this.readings = []
   }
 
-  #getReading(ray, roadBorders) {
+  #getReading (ray, roadBorders) {
     let touches = []
 
     for (let i = 0; i < roadBorders.length; i++) {
@@ -28,7 +28,7 @@ class Sensor {
     } else {
       const offsets = touches.map(e => e.offset)
       const minOffset = Math.min(...offsets)
-      return touches.find(e=>e.offset==minOffset)
+      return touches.find(e => e.offset == minOffset)
     }
   }
 
@@ -37,12 +37,12 @@ class Sensor {
     this.readings = []
     for (let i = 0; i < this.rays.length; i++) {
       this.readings.push(
-        this.#getReading(this.rays[i], roadBorders)
+        this.#getReading(this.rays[i], roadBorders),
       )
     }
   }
 
-  #castRays() {
+  #castRays () {
     this.rays = []
     for (let i = 0; i < this.rayCount; i++) {
       const rayAngle = lerp(

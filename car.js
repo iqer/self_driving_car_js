@@ -20,7 +20,7 @@ class Car {
     this.sensor.update(roadBorders)
   }
 
-  #move() {
+  #move () {
     // implement forward and backward
     if (this.controls.forward) {
       this.speed += this.acceleration
