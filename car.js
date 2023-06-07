@@ -1,5 +1,5 @@
 class Car {
-  constructor (x, y, width, height, controlType, maxSpeed = 3) {
+  constructor (x, y, width, height, controlType, maxSpeed = 3, color = 'blue') {
     this.x = x
     this.y = y
     this.width = width
@@ -8,19 +8,36 @@ class Car {
     this.speed = 0
     this.acceleration = 0.2
     this.maxSpeed = maxSpeed
-    this.fraction = 0.05
+    this.friction = 0.05
     this.angle = 0
     this.damaged = false
 
-    this.useBrain = controlType === 'AI'
+    this.useBrain = controlType == 'AI'
 
-    if (controlType !== 'DUMMY') {
+    if (controlType != 'DUMMY') {
       this.sensor = new Sensor(this)
       this.brain = new NeuralNetwork(
         [this.sensor.rayCount, 6, 4],
       )
     }
     this.controls = new Controls(controlType)
+
+    this.img = new Image()
+    this.img.src = 'car.png'
+
+    this.mask = document.createElement('canvas')
+    this.mask.width = width
+    this.mask.height = height
+
+    const maskCtx = this.mask.getContext('2d')
+    this.img.onload = () => {
+      maskCtx.fillStyle = color
+      maskCtx.rect(0, 0, this.width, this.height)
+      maskCtx.fill()
+
+      maskCtx.globalCompositeOperation = 'destination-atop'
+      maskCtx.drawImage(this.img, 0, 0, this.width, this.height)
+    }
   }
 
   update (roadBorders, traffic) {
@@ -32,7 +49,8 @@ class Car {
     if (this.sensor) {
       this.sensor.update(roadBorders, traffic)
       const offsets = this.sensor.readings.map(
-        s => s == null ? 0 : 1 - s.offset)
+        s => s == null ? 0 : 1 - s.offset,
+      )
       const outputs = NeuralNetwork.feedForward(offsets, this.brain)
 
       if (this.useBrain) {
@@ -55,7 +73,6 @@ class Car {
         return true
       }
     }
-
     return false
   }
 
@@ -67,52 +84,48 @@ class Car {
       x: this.x - Math.sin(this.angle - alpha) * rad,
       y: this.y - Math.cos(this.angle - alpha) * rad,
     })
-
     points.push({
       x: this.x - Math.sin(this.angle + alpha) * rad,
       y: this.y - Math.cos(this.angle + alpha) * rad,
     })
-
     points.push({
       x: this.x - Math.sin(Math.PI + this.angle - alpha) * rad,
       y: this.y - Math.cos(Math.PI + this.angle - alpha) * rad,
     })
-
     points.push({
       x: this.x - Math.sin(Math.PI + this.angle + alpha) * rad,
       y: this.y - Math.cos(Math.PI + this.angle + alpha) * rad,
     })
-
     return points
   }
 
   #move () {
-    // implement forward and backward
     if (this.controls.forward) {
       this.speed += this.acceleration
     }
     if (this.controls.reverse) {
       this.speed -= this.acceleration
     }
+
     if (this.speed > this.maxSpeed) {
       this.speed = this.maxSpeed
     }
     if (this.speed < -this.maxSpeed / 2) {
       this.speed = -this.maxSpeed / 2
     }
+
     if (this.speed > 0) {
-      this.speed -= this.fraction
+      this.speed -= this.friction
     }
     if (this.speed < 0) {
-      this.speed += this.fraction
+      this.speed += this.friction
     }
-    if (Math.abs(this.speed) < this.fraction) {
+    if (Math.abs(this.speed) < this.friction) {
       this.speed = 0
     }
 
-    if (this.speed !== 0) {
+    if (this.speed != 0) {
       const flip = this.speed > 0 ? 1 : -1
-      // implement left and right
       if (this.controls.left) {
         this.angle += 0.03 * flip
       }
@@ -121,25 +134,32 @@ class Car {
       }
     }
 
-    // 让车朝向车头的方向行进
     this.x -= Math.sin(this.angle) * this.speed
     this.y -= Math.cos(this.angle) * this.speed
   }
 
-  draw (ctx, color, drawSensor = false) {
-    if (this.damaged) {
-      ctx.fillStyle = 'grey'
-    } else {
-      ctx.fillStyle = color
-    }
-    ctx.beginPath()
-    ctx.moveTo(this.polygon[0].x, this.polygon[0].y)
-    for (let i = 1; i < this.polygon.length; i++) {
-      ctx.lineTo(this.polygon[i].x, this.polygon[i].y)
-    }
-    ctx.fill()
+  draw (ctx, drawSensor = false) {
     if (this.sensor && drawSensor) {
       this.sensor.draw(ctx)
     }
+
+    ctx.save()
+    ctx.translate(this.x, this.y)
+    ctx.rotate(-this.angle)
+    if (!this.damaged) {
+      ctx.drawImage(this.mask,
+        -this.width / 2,
+        -this.height / 2,
+        this.width,
+        this.height)
+      ctx.globalCompositeOperation = 'multiply'
+    }
+    ctx.drawImage(this.img,
+      -this.width / 2,
+      -this.height / 2,
+      this.width,
+      this.height)
+    ctx.restore()
+
   }
 }
